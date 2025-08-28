@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trata de Personas en Colombia — Observatorio Ciudadano</title>
+  <meta name="description" content="Observatorio ciudadano con gráficos interactivos sobre la trata de personas en Colombia (2000–2025)."/>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Leaflet (mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root{
+      --bg:#f7fafc;/* gris muy claro */
+      --card:#ffffff;
+      --ink:#0f172a;/* slate-900 */
+      --muted:#475569;/* slate-600 */
+      --accent:#6d28d9;/* morado */
+      --accent-2:#06b6d4;/* cyan */
+      --accent-3:#f43f5e;/* rose */
+      --ring: 0 10px 30px rgba(13, 38, 76, .08);
+    }
+    html,body{background:var(--bg);color:var(--ink);} 
+    .card{background:var(--card); box-shadow:var(--ring); border-radius:1.25rem}
+    .chip{border:1px solid rgba(15,23,42,.08); padding:.35rem .6rem; border-radius:9999px; font-size:.8rem}
+    .glow{box-shadow:0 0 0 8px rgba(109,40,217,.08);}
+    .grad{
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(109,40,217,.12), transparent 60%),
+                  radial-gradient(1000px 500px at 90% 0%, rgba(6,182,212,.12), transparent 60%);
+    }
+    .kpi span{font-variant-numeric:tabular-nums}
+    .section{scroll-margin-top:96px}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--ink);color:white;padding:.75rem 1rem;border-radius:.9rem}
+    .btn.secondary{background:var(--accent)}
+    .footer a{color:var(--muted)}
+    canvas{max-width:100%; max-height: 300px;}
+  </style>
+</head>
+<body class="min-h-screen grad">
+  <!-- Navbar -->
+  <header class="sticky top-0 z-40 backdrop-blur bg-white/70 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-400 glow"></div>
+        <div>
+          <p class="text-sm text-slate-500">Observatorio Ciudadano</p>
+          <h1 class="text-lg font-bold">Trata de Personas en Colombia</h1>
+        </div>
+      </div>
+      <nav class="hidden md:flex items-center gap-6 text-sm text-slate-600">
+        <a href="#panorama" class="hover:text-slate-900">Panorama</a>
+        <a href="#graficos" class="hover:text-slate-900">Gráficos</a>
+        <a href="#mapa" class="hover:text-slate-900">Mapa</a>
+        <a href="#leyes" class="hover:text-slate-900">Leyes</a>
+        <a href="#ayuda" class="hover:text-slate-900">Ayuda</a>
+      </nav>
+      <a href="#ayuda" class="btn hidden md:inline-flex"><i data-lucide="phone"></i> Denuncia / Ayuda</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="section" id="panorama">
+    <div class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-8 items-center">
+      <div class="space-y-5">
+        <span class="chip">Datos 2000–2025 • Demo interactivo</span>
+        <h2 class="text-4xl md:text-5xl font-extrabold leading-tight">Visibilicemos la <span class="text-violet-700">trata de personas</span> con datos claros e interactivos.</h2>
+        <p class="text-slate-600 text-lg">Este sitio es una maqueta completa lista para conectar con datos reales. Incluye gráficos, mapa, filtros por año y un directorio de ayuda. <strong>Los datos que ves son simulados</strong> y deben reemplazarse por cifras oficiales (Fiscalía, ICBF, UNODC).</p>
+        <div class="flex gap-3">
+          <a class="btn" href="#graficos"><i data-lucide="pie-chart"></i> Ver gráficos</a>
+          <a class="btn secondary" href="#mapa"><i data-lucide="map"></i> Abrir mapa</a>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="card p-5 kpi">
+          <p class="text-slate-500">Casos estimados (2025)</p>
+          <span class="text-4xl font-bold" id="kpiCasos">—</span>
+          <p class="text-slate-400 text-sm">Variación anual: <span id="kpiVar">—</span></p>
+        </div>
+        <div class="card p-5 kpi">
+          <p class="text-slate-500">% Explotación sexual (2025)</p>
+          <span class="text-4xl font-bold" id="kpiSexual">—</span>
+          <p class="text-slate-400 text-sm">Resto: laboral y otras</p>
+        </div>
+        <div class="card p-5 kpi">
+          <p class="text-slate-500">Edad mediana víctima</p>
+          <span class="text-4xl font-bold" id="kpiEdad">—</span>
+          <p class="text-slate-400 text-sm">Estimado a partir de la muestra</p>
+        </div>
+        <div class="card p-5 kpi">
+          <p class="text-slate-500">Departamentos con más alertas</p>
+          <span class="text-4xl font-bold" id="kpiDeptos">—</span>
+          <p class="text-slate-400 text-sm">Top 3 (demo)</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controles -->
+  <section class="section" id="controles">
+    <div class="max-w-7xl mx-auto px-4 pb-4">
+      <div class="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sliders"></i>
+          <p class="font-semibold">Rango de años</p>
+        </div>
+        <div class="flex items-center gap-4 w-full md:w-auto">
+          <input id="inputStart" type="range" min="2000" max="2025" value="2005" class="w-full md:w-64"/>
+          <input id="inputEnd" type="range" min="2000" max="2025" value="2025" class="w-full md:w-64"/>
+          <span class="chip" id="labelRango">2005–2025</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnHoy" class="btn secondary"><i data-lucide="target"></i> Enfocar 2020–2025</button>
+          <button id="btnFull" class="btn"><i data-lucide="expand"></i> Ver 2000–2025</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gráficos -->
+  <section class="section" id="graficos">
+    <div class="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-12 gap-6">
+      <div class="card p-6 lg:col-span-7">
+        <h3 class="font-semibold text-xl mb-2">Evolución anual de casos (2000–2025)</h3>
+        <canvas id="chLinea"></canvas>
+      </div>
+      <div class="card p-6 lg:col-span-5">
+        <h3 class="font-semibold text-xl mb-2">Distribución por sexo (promedio período)</h3>
+        <canvas id="chDonaSexo"></canvas>
+      </div>
+      <div class="card p-6 lg:col-span-6">
+        <h3 class="font-semibold text-xl mb-2">Modalidades principales (últimos 6 años)</h3>
+        <canvas id="chStack"></canvas>
+      </div>
+      <div class="card p-6 lg:col-span-6">
+        <h3 class="font-semibold text-xl mb-2">Top 10 departamentos por reportes (promedio reciente)</h3>
+        <canvas id="chHBar"></canvas>
+      </div>
+      <div class="card p-6 lg:col-span-6">
+        <h3 class="font-semibold text-xl mb-2">Rangos de edad estimados</h3>
+        <canvas id="chRadar"></canvas>
+      </div>
+      <div class="card p-6 lg:col-span-6">
+        <h3 class="font-semibold text-xl mb-2">Víctimas por condición migratoria (demo)</h3>
+        <canvas id="chPieMigra"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mapa -->
+  <section class="section" id="mapa">
+    <div class="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-12 gap-6">
+      <div class="card p-6 lg:col-span-7">
+        <h3 class="font-semibold text-xl mb-2">Mapa de alertas y reportes recientes</h3>
+        <div id="map" class="w-full h-[420px] rounded-2xl"></div>
+      </div>
+      <div class="card p-6 lg:col-span-5">
+        <h3 class="font-semibold text-xl mb-3">Notas y limitaciones</h3>
+        <ul class="list-disc pl-6 text-slate-600 space-y-2">
+          <li>Los puntos del mapa son <strong>demostrativos</strong>. Sustituye por capas reales (p.ej., geoJSON de DANE/Fiscalía).</li>
+          <li>Los datos de todos los gráficos son <strong>simulados</strong> para mostrar la interfaz.</li>
+          <li>Conecta con APIs, CSV o Google Sheets para datos reales (ver función <code>loadRealData()</code> en el script).</li>
+        </ul>
+        <div class="mt-4">
+          <a class="btn w-full justify-center" href="#leyes"><i data-lucide="file-text"></i> Ver marco legal</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marco legal y ayuda -->
+  <section class="section" id="leyes">
+    <div class="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-12 gap-6">
+      <div class="card p-6 lg:col-span-7">
+        <h3 class="font-semibold text-xl mb-3">Marco legal (resumen)</h3>
+        <ul class="text-slate-700 space-y-2">
+          <li><strong>Constitución Política de Colombia</strong>: Art. 17 prohíbe la esclavitud, servidumbre y trata de seres humanos.</li>
+          <li><strong>Ley 985 de 2005</strong>: medidas contra la trata y atención a víctimas.</li>
+          <li><strong>Ley 1719 de 2014</strong>: acceso a justicia para víctimas de violencia sexual.</li>
+          <li><strong>Decreto 1069 de 2014</strong> y <strong>Política Pública contra la Trata</strong>: lineamientos interinstitucionales.</li>
+        </ul>
+        <p class="text-slate-500 text-sm mt-3">* Este bloque es informativo y no sustituye asesoría legal. Verifica textos oficiales.</p>
+      </div>
+      <div class="card p-6 lg:col-span-5" id="ayuda">
+        <h3 class="font-semibold text-xl mb-3">¿Necesitas ayuda o quieres denunciar?</h3>
+        <div class="space-y-2 text-slate-700">
+          <p><strong>Fiscalía General de la Nación (Línea 122)</strong> – Denuncia de emergencia.</p>
+          <p><strong>ICBF – Línea 141</strong> – Niñez y adolescencia.</p>
+          <p><strong>Linea Nacional contra la Trata</strong> – 018000-522020 (verifica número oficial).</p>
+        </div>
+        <div class="mt-4 flex gap-3">
+          <a class="btn w-full justify-center" href="#">Llamar 122</a>
+          <a class="btn secondary w-full justify-center" href="#">Guía para denunciar</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-8 text-sm text-slate-500 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+      <p>© 2025 Observatorio Ciudadano — Maqueta creada por Sebastián con ayuda de IA. Datos demostrativos.</p>
+      <div class="flex gap-4">
+        <a href="#panorama">Inicio</a>
+        <a href="#graficos">Gráficos</a>
+        <a href="#mapa">Mapa</a>
+        <a href="#leyes">Leyes</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script principal -->
+  <script>
+    lucide.createIcons();
+
+    /* ====================
+       1) DATOS DEMO 2000–2025
+       Reemplaza por datos reales. Puedes cargar desde CSV/JSON.
+    ==================== */
+    const years = Array.from({length: 26}, (_,i) => 2000 + i);
+
+    // Casos totales por año (simulado con tendencia suave y ruido)
+    const totalCases = years.map((y, idx) => {
+      const base = 200 + idx * 12; // tendencia creciente
+      const season = 30 * Math.sin(idx/2);
+      const noise = Math.floor(Math.random()*40 - 20);
+      return Math.max(80, Math.round(base + season + noise));
+    });
+
+    // Distribución por sexo (promedio período) — demo
+    const sexo = { femenino: 62, masculino: 35, otro_no_reportado: 3 };
+
+    // Modalidades (solo últimos 6 años)
+    function lastN(arr, n){return arr.slice(-n)}
+    const last6Years = lastN(years, 6);
+    const modalidades = {
+      sexual: last6Years.map((_,i)=> 180 + i*10 + (Math.random()*20|0)),
+      laboral: last6Years.map((_,i)=> 120 + i*5 + (Math.random()*15|0)),
+      servidumbre: last6Years.map((_,i)=> 50 + i*3 + (Math.random()*8|0)),
+      otras: last6Years.map((_,i)=> 25 + i*2 + (Math.random()*6|0)),
+    };
+
+    // Top departamentos (promedio reciente) — demo
+    const departamentosDemo = [
+      ['Bogotá D.C.', 320], ['Antioquia', 280], ['Valle del Cauca', 260], ['Atlántico', 190],
+      ['Norte de Santander', 175], ['Santander', 160], ['Cundinamarca', 150], ['Bolívar', 140],
+      ['Cesar', 130], ['Nariño', 120], ['Meta', 110], ['Córdoba', 105]
+    ];
+
+    // Rangos de edad (porcentaje aproximado) — demo
+    const rangosEdad = { '0–11': 8, '12–17': 28, '18–24': 26, '25–34': 20, '35–49': 12, '50+': 6 };
+
+    // Migración (demo)
+    const migracion = { nacional: 68, migrante: 24, no_reportado: 8 };
+
+    /* ====================
+       2) UTILIDADES
+    ==================== */
+    function numberWithCommas(x){return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
+    function withinRange(y, s, e){return y >= s && y <= e}
+
+    /* ====================
+       3) KPI de portada (2025 y variación)
+    ==================== */
+    const kpiCasos = document.getElementById('kpiCasos');
+    const kpiVar = document.getElementById('kpiVar');
+    const kpiSexual = document.getElementById('kpiSexual');
+    const kpiEdad = document.getElementById('kpiEdad');
+    const kpiDeptos = document.getElementById('kpiDeptos');
+
+    function setKPIs(){
+      const last = totalCases[totalCases.length-1];
+      const prev = totalCases[totalCases.length-2];
+      const varPct = ((last - prev)/prev*100).toFixed(1);
+      kpiCasos.textContent = numberWithCommas(last);
+      kpiVar.textContent = (varPct>0?'+':'') + varPct + '%';
+      kpiSexual.textContent = modalidades.sexual[modalidades.sexual.length-1] ? Math.round(100* modalidades.sexual.at(-1) / (
+        modalidades.sexual.at(-1)+modalidades.laboral.at(-1)+modalidades.servidumbre.at(-1)+modalidades.otras.at(-1)
+      )) + '%' : '—';
+      // Edad mediana demo (a partir de rangos aproximados)
+      const ages = ['6','14','21','29','40','55'];
+      const weights = Object.values(rangosEdad);
+      const medianIdx = weights.reduce((acc, w, i, arr)=>{
+        const cumPrev = arr.slice(0,i).reduce((a,b)=>a+b,0);
+        return (cumPrev < 50 && cumPrev + w >= 50) ? i : acc;
+      }, 2);
+      kpiEdad.textContent = ages[medianIdx] + ' años';
+      kpiDeptos.textContent = departamentosDemo.slice(0,3).map(d=>d[0]).join(', ');
+    }
+    setKPIs();
+
+    /* ====================
+       4) CONTROLES DE RANGO
+    ==================== */
+    const inputStart = document.getElementById('inputStart');
+    const inputEnd = document.getElementById('inputEnd');
+    const labelRango = document.getElementById('labelRango');
+    function clampRange(){
+      let s = parseInt(inputStart.value,10);
+      let e = parseInt(inputEnd.value,10);
+      if (s>e){[s,e]=[e,s];}
+      inputStart.value = s; inputEnd.value = e;
+      labelRango.textContent = s + '–' + e;
+      updateCharts(s,e);
+    }
+    inputStart.addEventListener('input', clampRange);
+    inputEnd.addEventListener('input', clampRange);
+    document.getElementById('btnHoy').addEventListener('click', ()=>{inputStart.value=2020; inputEnd.value=2025; clampRange();});
+    document.getElementById('btnFull').addEventListener('click', ()=>{inputStart.value=2000; inputEnd.value=2025; clampRange();});
+
+    /* ====================
+       5) CHARTS (Chart.js)
+    ==================== */
+    // Gradientes sutiles para barras/áreas
+    function makeGradient(ctx, from, to){
+      const g = ctx.createLinearGradient(0,0,0,300);
+      g.addColorStop(0, from);
+      g.addColorStop(1, to);
+      return g;
+    }
+
+    const palette = {
+      violet: 'rgba(109, 40, 217, 0.8)',
+      cyan: 'rgba(6, 182, 212, 0.8)',
+      rose: 'rgba(244, 63, 94, 0.8)',
+      slate: 'rgba(100, 116, 139, 0.8)'
+    };
+
+    // Línea total
+    const ctxLinea = document.getElementById('chLinea').getContext('2d');
+    const chLinea = new Chart(ctxLinea, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [{
+          label: 'Casos (total anual)',
+          data: totalCases,
+          fill: true,
+          borderColor: palette.violet,
+          backgroundColor: makeGradient(ctxLinea, 'rgba(109,40,217,.25)', 'rgba(109,40,217,.02)'),
+          tension: .25,
+          pointRadius: 2
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, aspectRatio:2, plugins:{legend:{display:true}} }
+    });
+
+    // Dona sexo
+    const chDonaSexo = new Chart(document.getElementById('chDonaSexo'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Femenino','Masculino','Otro/NR'],
+        datasets: [{ data: [sexo.femenino, sexo.masculino, sexo.otro_no_reportado], backgroundColor:[palette.rose, palette.cyan, palette.slate] }]
+      },
+      options: { plugins:{ legend:{ position:'bottom' } } }
+    });
+
+    // Barras apiladas modalidades (últimos 6 años)
+    const ctxStack = document.getElementById('chStack').getContext('2d');
+    const chStack = new Chart(ctxStack, {
+      type: 'bar',
+      data: {
+        labels: last6Years,
+        datasets: [
+          {label:'Explotación sexual', data: modalidades.sexual, backgroundColor: palette.rose},
+          {label:'Explotación laboral', data: modalidades.laboral, backgroundColor: palette.cyan},
+          {label:'Servidumbre', data: modalidades.servidumbre, backgroundColor: palette.violet},
+          {label:'Otras', data: modalidades.otras, backgroundColor: palette.slate}
+        ]
+      },
+      options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{ x:{stacked:true}, y:{stacked:true} } }
+    });
+
+    // Barras horizontales Top departamentos
+    const chHBar = new Chart(document.getElementById('chHBar'), {
+      type: 'bar',
+      data: {
+        labels: departamentosDemo.slice(0,10).map(d=>d[0]),
+        datasets: [{ label:'Promedio reportes', data: departamentosDemo.slice(0,10).map(d=>d[1]), backgroundColor: palette.violet }]
+      },
+      options: { indexAxis:'y', plugins:{legend:{display:false}} }
+    });
+
+    // Radar rangos de edad
+    const chRadar = new Chart(document.getElementById('chRadar'), {
+      type: 'radar',
+      data: { labels: Object.keys(rangosEdad), datasets:[{ label:'% participación', data:Object.values(rangosEdad), backgroundColor:'rgba(6,182,212,.2)', borderColor:palette.cyan, pointBackgroundColor:palette.cyan }]},
+      options: { plugins:{legend:{display:false}} }
+    });
+
+    // Pie migración
+    const chPieMigra = new Chart(document.getElementById('chPieMigra'), {
+      type: 'pie',
+      data: { labels:['Nacional','Migrante','No reportado'], datasets:[{ data:Object.values(migracion), backgroundColor:[palette.violet, palette.cyan, palette.slate] }] },
+      options: { plugins:{legend:{position:'bottom'}} }
+    });
+
+    // Actualizar por rango
+    function updateCharts(start, end){
+      const idxS = years.findIndex(y=>y===start);
+      const idxE = years.findIndex(y=>y===end);
+      const sliceYears = years.slice(idxS, idxE+1);
+      const sliceTotals = totalCases.slice(idxS, idxE+1);
+      chLinea.data.labels = sliceYears;
+      chLinea.data.datasets[0].data = sliceTotals;
+      chLinea.update();
+    }
+    // Inicializar rango por defecto
+    clampRange();
+
+    /* ====================
+       6) MAPA (Leaflet) — puntos demo
+    ==================== */
+    const map = L.map('map').setView([4.5709, -74.2973], 5.2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+    const puntosDemo = [
+      { ciudad:'Bogotá', coords:[4.711, -74.072], valor: 320 },
+      { ciudad:'Medellín', coords:[6.244, -75.581], valor: 280 },
+      { ciudad:'Cali', coords:[3.451, -76.532], valor: 260 },
+      { ciudad:'Barranquilla', coords:[10.968, -74.781], valor: 190 },
+      { ciudad:'Cúcuta', coords:[7.889, -72.496], valor: 175 },
+    ];
+    puntosDemo.forEach(p=>{
+      const radius = Math.max(8, Math.min(28, p.valor/12));
+      const circle = L.circleMarker(p.coords, { radius, color:'#6d28d9', fillColor:'#6d28d9', fillOpacity:0.35, weight:1.5 }).addTo(map);
+      circle.bindPopup(`<strong>${p.ciudad}</strong><br/>Reportes demo: ${p.valor}`);
+    });
+
+    /* ====================
+       7) Carga de datos reales (plantilla)
+       — Reemplaza esta función para conectar tu backend/CSV/Sheets
+    ==================== */
+    async function loadRealData(){
+      // Ejemplos:
+      // 1) Fetch JSON: const res = await fetch('/api/trata'); const data = await res.json();
+      // 2) CSV local: const text = await fetch('./trata.csv').then(r=>r.text()); parsear y actualizar datasets.
+      // 3) Google Sheets (CSV publish-to-web): const text = await fetch('https://docs.google.com/.../pub?output=csv').then(r=>r.text());
+      // Luego actualiza arrays years, totalCases, etc., y llama updateCharts(2000, 2025)
+    }
+  </script>
+</body>
+</html>
